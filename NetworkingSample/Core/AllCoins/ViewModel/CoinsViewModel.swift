@@ -16,12 +16,17 @@ class CoinsViewModel: ObservableObject {
     private let service = CoinDataService()
     
     init() {
-       fetchCoins()
-        
+        Task {
+            try await fetchCoins()
+        }
+    }
+    
+    func fetchCoins() async throws {
+        self.coins = try await service.fetchCoins()
     }
     
     // receives that info from Service(fetchCoins) and here we hop back to main thread. Keeps code modular, testable and reusable
-    func fetchCoins() {
+    func fetchCoinsWithCompletionHandler() {
 //        service.fetchCoins { coins, error in
 //            DispatchQueue.main.async {
 //                if let error = error {
