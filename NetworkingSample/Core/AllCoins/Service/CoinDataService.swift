@@ -12,26 +12,39 @@ class CoinDataService {
     let urlString = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=200&page=1&sparkline=false&price_change_percentage=24h&locale=en"
     // Service is responsible primarily to fetch info from an API and then service gives it to the viewModel
 
-    func fetchCoinsWithResult(completion: @escaping(Result<[Coin], Error>) -> Void) {
+    func fetchCoinsWithResult(completion: @escaping(Result<[Coin], CoinAPIError>) -> Void) {
         
         guard let url = URL(string: urlString) else { return }
         
         
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                completion(.failure(error))
+                completion(.failure(.unknownError(error: error)))
                 return
             }
             
-            guard let data = data else { return }
-            
-            guard let coins = try? JSONDecoder().decode([Coin].self, from: data) else {
-                print("DEBUG: Failed to decode coins")
-                return
-                
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(.requestFailed(description: "Request failed")))
+                 return
             }
-            completion(.success(coins))
-            print("DEBUG: Coins decoded \(coins)")
+            
+            guard httpResponse.statusCode == 200 else {
+                completion(.failure(.invalidStatusCode(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(.invalidData))
+                return
+            }
+            
+            do {
+                let coins = try JSONDecoder().decode([Coin].self, from: data)
+                completion(.success(coins))
+            } catch {
+                print("DEBUG: Failed to decode with error \(error)")
+                completion(.failure(.jsonParsingFailure))
+            }
         }.resume()
     }
     
@@ -71,15 +84,7 @@ class CoinDataService {
                 return
             }
             
-            guard let httpResponse = response as? HTTPURLResponse else {
-//                    self.errorMessage = "Bad HTTPREsponse"
-                 return
-            }
             
-            guard httpResponse.statusCode == 200 else {
-//                    self.errorMessage = "Failed to fetch with status code \(httpResponse.statusCode)"
-                return
-            }
 //            print("DEBUG: Failed to fetch with status code \(httpResponse.statusCode)")
 
             guard let data = data else { return }

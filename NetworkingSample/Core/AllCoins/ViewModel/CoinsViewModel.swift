@@ -32,13 +32,15 @@ class CoinsViewModel: ObservableObject {
 //            }
 //            
 //        }
-        service.fetchCoinsWithResult { result in
+        service.fetchCoinsWithResult { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let coins):
-                    self.coins = coins
+                    self?.coins = coins
+                    // if there is only self w/o it creates strong ARC ,
+                    // if it has self? then it is weak ARC
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
+                    self?.errorMessage = error.localizedDescription
                 }
             }
         }
